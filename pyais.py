@@ -82,7 +82,7 @@ def post_to_home_assistant(sensor_url, name, mmsi, vessel_count):
         }
         response = requests.post(sensor_url, headers=HEADERS, json=payload)
         response.raise_for_status()
-        logger.info(f"Posted to Home Assistant: {payload}")
+        logger.info(f"Posted to Home Assistant: {sensor_url} {payload}")
     except requests.exceptions.RequestException as e:
         logger.error(f"Failed to post to Home Assistant: {e}")
 
