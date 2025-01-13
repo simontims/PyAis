@@ -7,7 +7,7 @@ import requests
 
 # Environment variables
 MQTT_SERVER = os.getenv("MQTT_SERVER", "YOUR_MQTT_SERVER_IP")
-MQTT_PORT = int(os.getenv("MQTT_PORT", YOUR_MQTT_PORT))
+MQTT_PORT = int(os.getenv("MQTT_PORT", 1883))
 MQTT_TOPIC = os.getenv("MQTT_TOPIC", "YOUR_MQTT_TOPIC")
 HA_URI = os.getenv("HA_URI", "YOUR_HA_URL, ie http://hostname_or_ip:8123/api/states/sensor.yourSensorName")
 HA_TOKEN = os.getenv("HA_TOKEN", "YOUR_BEARER_TOKEN_HERE")
