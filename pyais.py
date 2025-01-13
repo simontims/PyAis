@@ -4,8 +4,16 @@ import paho.mqtt.client as mqtt
 from datetime import datetime, timedelta
 import requests
 import logging
+import pytz
 import sys
 sys.stdout.reconfigure(line_buffering=True)
+
+# Configure timezone
+LOCAL_TIMEZONE = pytz.timezone("Pacific/Auckland")
+
+def get_local_time():
+    """Get the current local time in the configured timezone."""
+    return datetime.now(LOCAL_TIMEZONE).strftime("%Y-%m-%d %H:%M:%S")
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -139,7 +147,7 @@ def on_message(client, userdata, message):
 
 def main():
     """Main function to set up MQTT client and listen for messages."""
-    logger.info("Startup")
+    logger.info(f"Script started at {get_local_time()}")
     logger.info(f"Configured topics: {MQTT_TOPICS}")
 
     # Load MMSI data from file
