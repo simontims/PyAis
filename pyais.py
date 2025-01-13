@@ -4,6 +4,11 @@ import paho.mqtt.client as mqtt
 import time
 from datetime import datetime, timedelta
 import requests
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger()
 
 # Environment variables
 MQTT_SERVER = os.getenv("MQTT_SERVER", "YOUR_MQTT_SERVER_IP")
@@ -79,7 +84,7 @@ def main():
     client = mqtt.Client()
     client.on_message = on_message
 
-    print(f"Connecting to MQTT broker: {MQTT_SERVER}:{MQTT_PORT}")
+    logger.info(f"Connecting to MQTT broker: {MQTT_SERVER}:{MQTT_PORT}")
 
     # Connect to MQTT broker
     client.connect(MQTT_SERVER, MQTT_PORT, 60)
