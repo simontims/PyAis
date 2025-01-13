@@ -88,6 +88,8 @@ def post_to_home_assistant(sensor_url, name, mmsi, vessel_count):
 
 def on_message(client, userdata, message):
     """Handle incoming MQTT messages."""
+    # logger.info(f"Message received on topic {message.topic}: {message.payload.decode('utf-8')}")
+
     global mmsi_data
 
     topic = message.topic
