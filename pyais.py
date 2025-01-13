@@ -6,10 +6,10 @@ from datetime import datetime, timedelta
 import requests
 
 # Environment variables
-MQTT_SERVER = os.getenv("MQTT_SERVER", "192.168.1.45")
-MQTT_PORT = int(os.getenv("MQTT_PORT", 1883))
-MQTT_TOPIC = os.getenv("MQTT_TOPIC", "ais/data")
-HA_URI = os.getenv("HA_URI", "http://192.168.1.45:8123/api/states/sensor.AISReceived")
+MQTT_SERVER = os.getenv("MQTT_SERVER", "YOUR_MQTT_SERVER_IP")
+MQTT_PORT = int(os.getenv("MQTT_PORT", YOUR_MQTT_PORT))
+MQTT_TOPIC = os.getenv("MQTT_TOPIC", "YOUR_MQTT_TOPIC")
+HA_URI = os.getenv("HA_URI", "YOUR_HA_URL, ie http://hostname_or_ip:8123/api/states/sensor.yourSensorName")
 HA_TOKEN = os.getenv("HA_TOKEN", "YOUR_BEARER_TOKEN_HERE")
 
 # Headers for Home Assistant API
@@ -52,6 +52,8 @@ def on_message(client, userdata, message):
         if not mmsi or not name:
             print("Message missing required fields (name or MMSI), skipping.")
             return
+        
+        print(f"Received message: {name} ({mmsi})")
 
         # Add the MMSI with a timestamp to the tracking list
         mmsi_data.append((mmsi, timestamp))
