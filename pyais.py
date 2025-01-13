@@ -8,16 +8,23 @@ import pytz
 import sys
 sys.stdout.reconfigure(line_buffering=True)
 
-# Configure timezone
-LOCAL_TIMEZONE = pytz.timezone("Pacific/Auckland")
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger()
+
+# Get timezone from environment variable
+timezone_env = os.getenv("TZ")
+if not timezone_env:
+    raise ValueError("The 'TZ' environment variable is not set. Please configure it in the compose file.")
+
+try:
+    LOCAL_TIMEZONE = pytz.timezone(timezone_env)
+except pytz.UnknownTimeZoneError:
+    raise ValueError(f"The timezone '{timezone_env}' is not recognized. Please check the 'TZ' value.")
 
 def get_local_time():
     """Get the current local time in the configured timezone."""
     return datetime.now(LOCAL_TIMEZONE).strftime("%Y-%m-%d %H:%M:%S")
-
-# Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger()
 
 # Environment variables
 MQTT_SERVER = os.getenv("MQTT_SERVER")
@@ -147,7 +154,7 @@ def on_message(client, userdata, message):
 
 def main():
     """Main function to set up MQTT client and listen for messages."""
-    logger.info(f"Script started at {get_local_time()}")
+    logger.info("Script started")
     logger.info(f"Configured topics: {MQTT_TOPICS}")
 
     # Load MMSI data from file
