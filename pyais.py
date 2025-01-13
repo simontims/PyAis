@@ -49,12 +49,12 @@ def on_message(client, userdata, message):
         name = data.get("name")
         timestamp = datetime.now()
 
+        print(f"Received message: {name} ({mmsi})")    
+
         if not mmsi or not name:
             print("Message missing required fields (name or MMSI), skipping.")
             return
         
-        print(f"Received message: {name} ({mmsi})")
-
         # Add the MMSI with a timestamp to the tracking list
         mmsi_data.append((mmsi, timestamp))
 
@@ -78,6 +78,8 @@ def main():
     """Main function to set up MQTT client and listen for messages."""
     client = mqtt.Client()
     client.on_message = on_message
+
+    print(f"Connecting to MQTT broker: {MQTT_SERVER}:{MQTT_PORT}")
 
     # Connect to MQTT broker
     client.connect(MQTT_SERVER, MQTT_PORT, 60)
