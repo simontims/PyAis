@@ -5,6 +5,8 @@ import time
 from datetime import datetime, timedelta
 import requests
 import logging
+import sys
+sys.stdout.reconfigure(line_buffering=True)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -54,7 +56,7 @@ def on_message(client, userdata, message):
         name = data.get("name")
         timestamp = datetime.now()
 
-        print(f"Received message: {name} ({mmsi})")    
+        logger.info(f"Received message: {name} ({mmsi})") 
 
         if not mmsi or not name:
             print("Message missing required fields (name or MMSI), skipping.")
@@ -81,6 +83,7 @@ def on_message(client, userdata, message):
 
 def main():
     """Main function to set up MQTT client and listen for messages."""
+    logger.info(f"Startup")
     client = mqtt.Client()
     client.on_message = on_message
 
@@ -91,13 +94,13 @@ def main():
 
     # Subscribe to the topic
     client.subscribe(MQTT_TOPIC)
-    print(f"Subscribed to MQTT topic: {MQTT_TOPIC}")
+    logger.info(f"Subscribed to MQTT topic: {MQTT_TOPIC}")
 
     # Start the MQTT loop
     try:
         client.loop_forever()
     except KeyboardInterrupt:
-        print("Exiting...")
+        logger.info(f"Exiting...")
         client.disconnect()
 
 if __name__ == "__main__":
