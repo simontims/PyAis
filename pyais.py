@@ -55,36 +55,33 @@ TOPIC_TO_SENSOR = {
 
 # Storage for MMSI tracking
 mmsi_data = {}
+mmsi_name_lookup = {}
 
 def load_mmsi_data():
-    """Load MMSI data from a JSON file."""
-    global mmsi_data
+    """Load MMSI data and MMSI-to-name lookup from a JSON file."""
+    global mmsi_data, mmsi_name_lookup
     if os.path.exists(DATA_FILE_PATH):
         try:
             with open(DATA_FILE_PATH, 'r') as file:
                 raw_data = json.load(file)
-                # Convert timestamp strings back to datetime objects
-                mmsi_data = {
-                    topic: [(entry['mmsi'], datetime.fromisoformat(entry['timestamp'])) for entry in entries]
-                    for topic, entries in raw_data.items()
-                }
-                logger.info(f"Loaded MMSI data from {DATA_FILE_PATH}")
+                mmsi_data = raw_data.get("mmsi_data", {})
+                mmsi_name_lookup = raw_data.get("mmsi_name_lookup", {})
+                logger.info(f"Loaded MMSI data and name lookup from {DATA_FILE_PATH}")
         except Exception as e:
             logger.error(f"Failed to load MMSI data: {e}")
     else:
         logger.info(f"No existing data file found at {DATA_FILE_PATH}, starting fresh.")
 
 def save_mmsi_data():
-    """Save MMSI data to a JSON file."""
+    """Save MMSI data and MMSI-to-name lookup to a JSON file."""
     try:
-        # Prepare data for JSON serialization
         raw_data = {
-            topic: [{'mmsi': m, 'timestamp': t.isoformat()} for m, t in entries]
-            for topic, entries in mmsi_data.items()
+            "mmsi_data": mmsi_data,
+            "mmsi_name_lookup": mmsi_name_lookup
         }
         with open(DATA_FILE_PATH, 'w') as file:
             json.dump(raw_data, file)
-        logger.info(f"Saved MMSI data to {DATA_FILE_PATH}")
+        logger.info(f"Saved MMSI data and name lookup to {DATA_FILE_PATH}")
     except Exception as e:
         logger.error(f"Failed to save MMSI data: {e}")
 
@@ -107,9 +104,7 @@ def post_to_home_assistant(sensor_url, name, mmsi, vessel_count):
 
 def on_message(client, userdata, message):
     """Handle incoming MQTT messages."""
-    # logger.info(f"Message received on topic {message.topic}: {message.payload.decode('utf-8')}")
-
-    global mmsi_data
+    global mmsi_data, mmsi_name_lookup
 
     topic = message.topic
     sensor_url = TOPIC_TO_SENSOR.get(topic)
@@ -133,9 +128,24 @@ def on_message(client, userdata, message):
 
         logger.info(f"Received type {type} message: {name} ({mmsi}) on topic {topic}")
 
-        if not mmsi or not name:
-            logger.warning("Message missing required fields (name or MMSI), skipping.")
+        if not mmsi:
+            logger.warning("Message missing MMSI, skipping.")
             return
+
+        # Check the name in the lookup table
+        if not name:
+            name = mmsi_name_lookup.get(str(mmsi), None)
+            if name:
+                logger.info(f"Found name '{name}' for MMSI {mmsi} in lookup table.")
+            else:
+                logger.info(f"No name found for MMSI {mmsi}, using 'Unknown'.")
+                name = "Unknown"
+
+        # Update the lookup table if a new name is provided
+        if name != "Unknown" and str(mmsi) not in mmsi_name_lookup:
+            mmsi_name_lookup[str(mmsi)] = name
+            logger.info(f"Added '{name}' to the MMSI lookup for {mmsi}.")
+            save_mmsi_data()  # Save immediately after updating the lookup table
 
         # Initialize tracking for this topic if not already present
         if topic not in mmsi_data:
