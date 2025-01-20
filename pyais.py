@@ -9,7 +9,10 @@ import sys
 sys.stdout.reconfigure(line_buffering=True)
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+        level=logging.INFO, 
+        format='%(asctime)s - %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S')
 logger = logging.getLogger()
 
 # Get timezone from environment variable
