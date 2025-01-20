@@ -33,6 +33,7 @@ HA_SERVER_URL = os.getenv("HA_SERVER_URL")
 HA_TOKEN = os.getenv("HA_TOKEN")
 MQTT_TOPICS = os.getenv("MQTT_TOPICS").split(",")  # Comma-separated list of topics
 DATA_FILE_PATH = "/data/mmsi_data.json"  # Hardcoded path for persistent storage
+IGNORE_TYPES = os.getenv("IGNORE_TYPES", "").split(",")  # Comma-separated list of message types to ignore
 
 if not all([MQTT_SERVER, HA_SERVER_URL, HA_TOKEN, MQTT_TOPICS]):
     raise ValueError("Missing required environment variables: MQTT_SERVER, HA_SERVER_URL, HA_TOKEN, MQTT_TOPICS")
@@ -118,9 +119,16 @@ def on_message(client, userdata, message):
         data = json.loads(message.payload.decode("utf-8"))
         mmsi = data.get("mmsi")
         name = data.get("name")
+        type = data.get("type")
         timestamp = datetime.now()
 
-        logger.info(f"Received message: {name} ({mmsi}) on topic {topic}")
+        # Convert IGNORE_TYPES to integers and compare
+        ignore_types = set(map(int, IGNORE_TYPES))  # Convert to a set of integers
+        if type in ignore_types:
+            logger.info(f"Ignoring type {type} message: {name} ({mmsi}) on topic {topic}")
+            return
+
+        logger.info(f"Received type {type} message: {name} ({mmsi}) on topic {topic}")
 
         if not mmsi or not name:
             logger.warning("Message missing required fields (name or MMSI), skipping.")
@@ -156,6 +164,7 @@ def main():
     """Main function to set up MQTT client and listen for messages."""
     logger.info("Script started")
     logger.info(f"Configured topics: {MQTT_TOPICS}")
+    logger.info(f"IGNORE_TYPES: {IGNORE_TYPES}")
 
     # Load MMSI data from file
     load_mmsi_data()
