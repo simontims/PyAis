@@ -64,7 +64,11 @@ def load_mmsi_data():
         try:
             with open(DATA_FILE_PATH, 'r') as file:
                 raw_data = json.load(file)
-                mmsi_data = raw_data.get("mmsi_data", {})
+                mmsi_data = {
+                    topic: [(entry["mmsi"], datetime.fromisoformat(entry["timestamp"]))
+                            for entry in entries]
+                    for topic, entries in raw_data.get("mmsi_data", {}).items()
+                }
                 mmsi_name_lookup = raw_data.get("mmsi_name_lookup", {})
                 logger.info(f"Loaded MMSI data and name lookup from {DATA_FILE_PATH}")
         except Exception as e:
@@ -76,7 +80,10 @@ def save_mmsi_data():
     """Save MMSI data and MMSI-to-name lookup to a JSON file."""
     try:
         raw_data = {
-            "mmsi_data": mmsi_data,
+            "mmsi_data": {
+                topic: [{"mmsi": m, "timestamp": t.isoformat()} for m, t in entries]
+                for topic, entries in mmsi_data.items()
+            },
             "mmsi_name_lookup": mmsi_name_lookup
         }
         with open(DATA_FILE_PATH, 'w') as file:
@@ -84,6 +91,7 @@ def save_mmsi_data():
         logger.info(f"Saved MMSI data and name lookup to {DATA_FILE_PATH}")
     except Exception as e:
         logger.error(f"Failed to save MMSI data: {e}")
+
 
 def post_to_home_assistant(sensor_url, name, mmsi, vessel_count):
     """Post the data to Home Assistant."""
