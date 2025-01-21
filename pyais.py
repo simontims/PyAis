@@ -70,7 +70,7 @@ def fetch_name_from_aishub(mmsi):
     # Respect the global rate limit
     time_since_last_call = time.time() - LAST_AISHUB_CALL
     if time_since_last_call < AISHUB_RATE_LIMIT:
-        logger.info(f"AISHub API call skipped. Next call allowed in {AISHUB_RATE_LIMIT - time_since_last_call:.2f} seconds.")
+        logger.info(f"AISHub skipped, next call allowed in {AISHUB_RATE_LIMIT - time_since_last_call:.2f} seconds")
         return None
 
     # Construct API URL
@@ -94,10 +94,10 @@ def fetch_name_from_aishub(mmsi):
         if isinstance(data, list) and len(data) > 1 and isinstance(data[1], list) and len(data[1]) > 0:
             name = data[1][0].get("NAME")
             if name:
-                logger.info(f"Fetched name '{name}' for MMSI {mmsi} from AISHub.")
+                logger.info(f"Fetched '{name}' from AISHub.")
                 return name
 
-        logger.warning(f"No valid name found for MMSI {mmsi} in AISHub response.")
+        logger.warning(f"No valid name found for MMSI {mmsi} in AISHub response")
     except requests.exceptions.RequestException as e:
         logger.error(f"Error fetching name from AISHub for MMSI {mmsi}: {e}")
     except Exception as e:
@@ -121,7 +121,7 @@ def load_mmsi_data():
         except Exception as e:
             logger.error(f"Failed to load MMSI data: {e}")
     else:
-        logger.info(f"No existing data file found at {DATA_FILE_PATH}, starting fresh.")
+        logger.info(f"No data file found at {DATA_FILE_PATH}, starting fresh.")
         mmsi_data = {}
         mmsi_name_lookup = {}
 
@@ -137,7 +137,7 @@ def save_mmsi_data():
         }
         with open(DATA_FILE_PATH, 'w') as file:
             json.dump(raw_data, file)
-        logger.info(f"Saved MMSI data and name lookup to {DATA_FILE_PATH}")
+        logger.info(f"Saved {DATA_FILE_PATH}")
     except Exception as e:
         logger.error(f"Failed to save MMSI data: {e}")
 
@@ -154,7 +154,8 @@ def post_to_home_assistant(sensor_url, name, mmsi, vessel_count):
         }
         response = requests.post(sensor_url, headers=HEADERS, json=payload)
         response.raise_for_status()
-        logger.info(f"Posted to: {sensor_url} {payload}")
+        logger.info(f"Posted to: {sensor_url}")
+        logger.info(f"Payload: {json.dumps(payload)}")
     except requests.exceptions.RequestException as e:
         logger.error(f"Failed to post: {e}")
 
@@ -197,13 +198,13 @@ def on_message(client, userdata, message):
             name = shipname
             logger.info(f"Got shipname: {name}")
         elif not name:
-            logger.info(f"No name or shipname in message. Checking cache and AISHub.")
+            logger.info(f"No name or shipname")
             name = mmsi_name_lookup.get(str(mmsi), None)
 
             if name:
-                logger.info(f"Found name '{name}' for MMSI {mmsi} in cache.")
+                logger.info(f"Found '{name}' in cache.")
             else:
-                logger.info(f"Name not found in cache. Attempting to fetch from AISHub for MMSI {mmsi}.")
+                logger.info(f"Name not in cache, attempting fetch from AISHub")
                 fetched_name = fetch_name_from_aishub(mmsi)
 
                 if fetched_name:
@@ -213,7 +214,7 @@ def on_message(client, userdata, message):
                     name = fetched_name
                 else:
                     # If no name is fetched, leave the cache unchanged
-                    logger.info(f"No valid name found for MMSI {mmsi}. Using 'Unknown' for this message.")
+                    logger.info(f"No valid name from AISHub for {mmsi}, using 'Unknown'")
                     name = "Unknown"
         else:
             logger.info(f"Got name: {name}")
