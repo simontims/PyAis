@@ -172,6 +172,7 @@ def on_message(client, userdata, message):
         # Parse the incoming message
         data = json.loads(message.payload.decode("utf-8"))
         mmsi = data.get("mmsi")
+        shipname = data.get("shipname")
         name = data.get("name")
         type = data.get("type")
         timestamp = datetime.now()
@@ -182,15 +183,21 @@ def on_message(client, userdata, message):
             # logger.info(f"Ignoring type {type} message: {name} ({mmsi}) on topic {topic}")
             return
 
-        logger.info(f"Received type {type} message: {name} ({mmsi}) on {topic}")
+        logger.info(f"Received type {type} on {topic}")
 
         if not mmsi:
             logger.warning("Message missing MMSI, skipping.")
             return
 
-        # Check the name in the lookup table
-        if not name:
-            logger.info(f"No name in message for MMSI {mmsi}. Checking cache and AISHub.")
+        # Handle name and shipname prioritization
+        if shipname and name:
+            name = shipname
+            logger.info(f"Got name and shipname, using {name}")
+        elif not name and shipname:
+            name = shipname
+            logger.info(f"Got shipname: {name}")
+        elif not name:
+            logger.info(f"No name or shipname in message. Checking cache and AISHub.")
             name = mmsi_name_lookup.get(str(mmsi), None)
 
             if name:
@@ -206,8 +213,16 @@ def on_message(client, userdata, message):
                     name = fetched_name
                 else:
                     # If no name is fetched, leave the cache unchanged
-                    logger.info(f"No valid name found for MMSI {mmsi}. Using the MMSI for this message.")
-                    name = mmsi
+                    logger.info(f"No valid name found for MMSI {mmsi}. Using 'Unknown' for this message.")
+                    name = "Unknown"
+        else:
+            logger.info(f"Got name: {name}")
+
+        # If name is not in the cache and it's not "Unknown", add it
+        if name != "Unknown" and str(mmsi) not in mmsi_name_lookup:
+            mmsi_name_lookup[str(mmsi)] = name
+            save_mmsi_data()
+            logger.info(f"Added '{name}' to cache for MMSI {mmsi}.")
 
         # Initialize tracking for this topic if not already present
         if topic not in mmsi_data:
