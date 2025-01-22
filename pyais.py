@@ -213,7 +213,6 @@ def on_message(client, userdata, message):
                     save_mmsi_data()  # Save updated cache
                     name = fetched_name
                 else:
-                    # If no name is fetched, leave the cache unchanged
                     logger.info(f"No valid name from AISHub for {mmsi}, using 'Unknown'")
                     name = "Unknown"
         else:
@@ -222,7 +221,7 @@ def on_message(client, userdata, message):
         # Add to cache only if the name is new and valid
         if name != "Unknown" and str(mmsi) not in mmsi_name_lookup:
             mmsi_name_lookup[str(mmsi)] = name
-            save_mmsi_data()  # Save only when cache is updated
+            save_mmsi_data()
             logger.info(f"Added '{name}' to cache for MMSI {mmsi}.")
 
         # Initialize tracking for this topic if not already present
@@ -234,10 +233,13 @@ def on_message(client, userdata, message):
 
         # Remove MMSIs older than 60 minutes
         cutoff = datetime.now() - timedelta(minutes=60)
-        mmsi_data[topic] = [(m, t) for m, t in mmsi_data[topic] if t > cutoff]
+        new_topic_data = [(m, t) for m, t in mmsi_data[topic] if t > cutoff]
 
-        # Save updated MMSI data
-        save_mmsi_data()
+        # Save MMSI data only if changes occurred
+        if len(new_topic_data) != len(mmsi_data[topic]):
+            mmsi_data[topic] = new_topic_data
+            save_mmsi_data()
+            logger.info("Updated cache")
 
         # Calculate unique MMSIs
         unique_mmsis = {m for m, t in mmsi_data[topic]}
