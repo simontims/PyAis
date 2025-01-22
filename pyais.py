@@ -7,11 +7,14 @@ import requests
 import logging
 import pytz
 import sys
+import glob
 sys.stdout.reconfigure(line_buffering=True)
 
 # Rate limit management
 LAST_AISHUB_CALL = 0
 AISHUB_RATE_LIMIT = 60  # 1 call every 60 seconds
+
+
 
 # Configure logging
 logging.basicConfig(
@@ -43,6 +46,17 @@ AISHUB_USERNAME = os.getenv("AISHUB_USERNAME")
 MQTT_TOPICS = os.getenv("MQTT_TOPICS").split(",")  # Comma-separated list of topics
 DATA_FILE_PATH = "/data/mmsi_data.json"  # Hardcoded path for persistent storage
 IGNORE_TYPES = os.getenv("IGNORE_TYPES", "").split(",")  # Comma-separated list of message types to ignore
+
+# Logging received JSON messages
+LOG_RECEIVED_JSON = os.getenv("LOG_RECEIVED_JSON", "false").lower() == "true"
+LOG_RECEIVED_JSON_PATH = "/data/inputLog"  # Hardcoded path
+
+# Logging JSON retention period in minutes
+LOG_RECEIVED_MINUTES = int(os.getenv("LOG_RECEIVED_MINUTES", 5))  # Default to 5 minutes
+
+# Ensure the log directory exists
+if LOG_RECEIVED_JSON:
+    os.makedirs(LOG_RECEIVED_JSON_PATH, exist_ok=True)
 
 if not all([MQTT_SERVER, HA_SERVER_URL, HA_TOKEN, MQTT_TOPICS]):
     raise ValueError("Missing required environment variables: MQTT_SERVER, HA_SERVER_URL, HA_TOKEN, MQTT_TOPICS")
@@ -163,6 +177,9 @@ def on_message(client, userdata, message):
     """Handle incoming MQTT messages."""
     global mmsi_data, mmsi_name_lookup
 
+    # Perform cleanup before processing the message
+    cleanup_old_json_logs()
+
     topic = message.topic
     sensor_url = TOPIC_TO_SENSOR.get(topic)
     if not sensor_url:
@@ -172,6 +189,17 @@ def on_message(client, userdata, message):
     try:
         # Parse the incoming message
         data = json.loads(message.payload.decode("utf-8"))
+
+        if LOG_RECEIVED_JSON:
+            try:
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                filename = os.path.join(LOG_RECEIVED_JSON_PATH, f"{timestamp}_{topic.replace('/', '_')}.json")
+                with open(filename, "w") as json_file:
+                    json.dump(data, json_file, indent=2)
+                # logger.info(f"Logged JSON to: {filename}")
+            except Exception as log_error:
+                logger.error(f"Failed to log received JSON: {log_error}")
+
         mmsi = data.get("mmsi")
         shipname = data.get("shipname")
         name = data.get("name")
@@ -252,6 +280,21 @@ def on_message(client, userdata, message):
         logger.error(f"Error decoding JSON: {e}")
     except Exception as e:
         logger.error(f"Error processing message: {e}")
+
+def cleanup_old_json_logs():
+    """Remove JSON files older than the retention period."""
+    if not LOG_RECEIVED_JSON:
+        return
+
+    try:
+        cutoff_time = datetime.now() - timedelta(minutes=LOG_RECEIVED_MINUTES)
+        for file_path in glob.glob(f"{LOG_RECEIVED_JSON_PATH}/*.json"):
+            file_mtime = datetime.fromtimestamp(os.path.getmtime(file_path))
+            if file_mtime < cutoff_time:
+                os.remove(file_path)
+                logger.info(f"Deleted old JSON log: {file_path}")
+    except Exception as e:
+        logger.error(f"Error during log cleanup: {e}")
 
 
 def main():
