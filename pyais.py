@@ -137,7 +137,7 @@ def save_mmsi_data():
         }
         with open(DATA_FILE_PATH, 'w') as file:
             json.dump(raw_data, file)
-        logger.info(f"Saved {DATA_FILE_PATH}")
+        # logger.info(f"Saved {DATA_FILE_PATH}")
     except Exception as e:
         logger.error(f"Failed to save MMSI data: {e}")
 
