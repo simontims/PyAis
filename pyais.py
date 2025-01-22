@@ -47,6 +47,12 @@ MQTT_TOPICS = os.getenv("MQTT_TOPICS").split(",")  # Comma-separated list of top
 DATA_FILE_PATH = "/data/mmsi_data.json"  # Hardcoded path for persistent storage
 IGNORE_TYPES = os.getenv("IGNORE_TYPES", "").split(",")  # Comma-separated list of message types to ignore
 
+# Parse MMSI_TYPE_THROTTLE from the environment
+MMSI_TYPE_THROTTLE = json.loads(os.getenv("MMSI_TYPE_THROTTLE", "[]"))
+
+# Track last processed time for throttling
+throttle_tracker = {}
+
 # Logging received JSON messages
 LOG_RECEIVED_JSON = os.getenv("LOG_RECEIVED_JSON", "false").lower() == "true"
 LOG_RECEIVED_JSON_PATH = "/data/inputLog"  # Hardcoded path
@@ -211,6 +217,11 @@ def on_message(client, userdata, message):
         if type in ignore_types:
             logger.info(f"Ignoring type {type} on {topic}")
             return
+        
+        # Apply throttling
+        if not should_process_message(mmsi, type):
+            logger.info(f"Throttled {mmsi} type {type}")
+            return
 
         logger.info(f"Received type {type} on {topic}")
 
@@ -296,6 +307,23 @@ def cleanup_old_json_logs():
     except Exception as e:
         logger.error(f"Error during log cleanup: {e}")
 
+def should_process_message(mmsi, msg_type):
+    """
+    Determine if a message should be processed based on throttling rules.
+    Returns True if the message should be processed; otherwise, False.
+    """
+    for rule in MMSI_TYPE_THROTTLE:
+        if rule["mmsi"] == mmsi and rule["type"] == msg_type:
+            throttle_key = f"{mmsi}_{msg_type}"
+            throttle_interval = rule.get("throttleInterval", 30)  # Default to 30 seconds
+            current_time = time.time()
+
+            # Check if enough time has passed since the last processed message
+            last_processed_time = throttle_tracker.get(throttle_key, 0)
+            if current_time - last_processed_time < throttle_interval:
+                return False  # Skip this message
+            throttle_tracker[throttle_key] = current_time
+    return True
 
 def main():
     """Main function to set up MQTT client and listen for messages."""
