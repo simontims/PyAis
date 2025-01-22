@@ -219,10 +219,10 @@ def on_message(client, userdata, message):
         else:
             logger.info(f"Got name: {name}")
 
-        # If name is not in the cache and it's not "Unknown", add it
+        # Add to cache only if the name is new and valid
         if name != "Unknown" and str(mmsi) not in mmsi_name_lookup:
             mmsi_name_lookup[str(mmsi)] = name
-            save_mmsi_data()
+            save_mmsi_data()  # Save only when cache is updated
             logger.info(f"Added '{name}' to cache for MMSI {mmsi}.")
 
         # Initialize tracking for this topic if not already present
