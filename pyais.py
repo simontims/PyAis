@@ -181,7 +181,7 @@ def on_message(client, userdata, message):
         # Convert IGNORE_TYPES to integers and compare
         ignore_types = set(map(int, IGNORE_TYPES))  # Convert to a set of integers
         if type in ignore_types:
-            # logger.info(f"Ignoring type {type} message: {name} ({mmsi}) on topic {topic}")
+            logger.info(f"Ignoring type {type} on {topic}")
             return
 
         logger.info(f"Received type {type} on {topic}")
