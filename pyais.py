@@ -292,6 +292,16 @@ def on_message(client, userdata, message):
     except Exception as e:
         logger.error(f"Error processing message: {e}")
 
+def on_connect(client, userdata, flags, rc):
+    """Subscribe on every (re)connect: the broker drops subscriptions when it restarts."""
+    if rc != 0:
+        logger.error(f"MQTT connect failed with code {rc}")
+        return
+    logger.info(f"Connected to MQTT broker: {MQTT_SERVER}:{MQTT_PORT}")
+    for topic in MQTT_TOPICS:
+        client.subscribe(topic)
+        logger.info(f"Subscribed to MQTT topic: {topic}")
+
 def cleanup_old_json_logs():
     """Remove JSON files older than the retention period."""
     if not LOG_RECEIVED_JSON:
@@ -336,17 +346,13 @@ def main():
     load_mmsi_data()
 
     client = mqtt.Client()
+    client.on_connect = on_connect  # subscribes to MQTT_TOPICS
     client.on_message = on_message
 
     logger.info(f"Connecting to MQTT broker: {MQTT_SERVER}:{MQTT_PORT}")
 
     # Connect to MQTT broker
     client.connect(MQTT_SERVER, MQTT_PORT, 60)
-
-    # Subscribe to all configured topics
-    for topic in MQTT_TOPICS:
-        client.subscribe(topic)
-        logger.info(f"Subscribed to MQTT topic: {topic}")
 
     # Start the MQTT loop
     try:
